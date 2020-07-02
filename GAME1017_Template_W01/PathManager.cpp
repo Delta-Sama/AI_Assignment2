@@ -151,11 +151,27 @@ void PathManager::DrawPath()
 	{
 		DEMA::QueueLine({ s_path[i]->GetFromNode()->x + 16, s_path[i]->GetFromNode()->y + 16 },
 			{ MAMA::HalfwayPoint(s_path[i]->GetFromNode()->Pt(), s_path[i]->GetToNode()->Pt()).x + 16,
-			MAMA::HalfwayPoint(s_path[i]->GetFromNode()->Pt(), s_path[i]->GetToNode()->Pt()).y + 16 }, { 255,255,0,255 });
+			MAMA::HalfwayPoint(s_path[i]->GetFromNode()->Pt(), s_path[i]->GetToNode()->Pt()).y + 16 }, { 255,0,0,255 });
 		DEMA::QueueLine({ MAMA::HalfwayPoint(s_path[i]->GetFromNode()->Pt(), s_path[i]->GetToNode()->Pt()).x + 16,
 			MAMA::HalfwayPoint(s_path[i]->GetFromNode()->Pt(), s_path[i]->GetToNode()->Pt()).y + 16 },
-			{ s_path[i]->GetToNode()->x + 16, s_path[i]->GetToNode()->y + 16 }, { 255,128,0,255 });
+			{ s_path[i]->GetToNode()->x + 16, s_path[i]->GetToNode()->y + 16 }, { 0,255,0,255 });
 	}
+}
+
+double PathManager::getTotalPathCost()
+{
+	double totalCost = 0.0;
+	for (PathConnection* connection : s_path)
+	{
+		totalCost += connection->GetCost();
+	}
+	return totalCost;
+}
+
+void PathManager::ClearPath()
+{
+	s_path.clear();
+	s_path.shrink_to_fit();
 }
 
 std::vector<NodeRecord*> PathManager::s_open;

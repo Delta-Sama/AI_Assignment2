@@ -60,6 +60,13 @@ void GameState::Enter()
 	SOMA::PlaySound("start", 0, 1);
 	Engine::Instance().setEngineState(game);
 
+	totalPathCostLabel = new Label("title", 32, 32, "Total path cost: ...", { 0,0,0,255 });
+	labels.push_back(new Label("title", 32, 64, "Press R to reset the Scene", { 0, 0, 0, 255 }));
+	labels.push_back(new Label("title", 32, 96, "Press H for Debug Mode", { 0,0,0,255 }));
+	debugLabels.push_back(new Label("title", 32, 64, "Press R to reset the Scene", {0, 0, 0, 255}));
+	debugLabels.push_back(new Label("title", 32, 96, "Press F to find Shortest Path", { 0, 0, 0, 255 }));
+	debugLabels.push_back(new Label("title", 32, 128, "Press H for Game Mode", { 0, 0, 0, 255 }));
+
 	m_pTileText = TEMA::GetTexture("tiles");
 	m_pPlayerText = TEMA::GetTexture("maga");
 	m_pPlayer = new Player({ 0,0,32,32 }, { (float)(16) * 32, (float)(12) * 32, 32, 32 }, Engine::Instance().GetRenderer(), m_pPlayerText, 0, 0, 0, 4);
@@ -126,29 +133,40 @@ void GameState::Enter()
 
 void GameState::Update()
 {
+	std::string txt;
+	PAMA::getPath()->size() == 0 ? txt = "Total path cost: ..." : txt = "Total path cost: " + std::to_string(PAMA::getTotalPathCost());
+	totalPathCostLabel->SetText(txt.c_str());
+
 	// m_pPlayer->Update(); // Just stops MagaMan from moving.
-	if (EVMA::KeyPressed(SDL_SCANCODE_GRAVE)) // ~ or ` key. Toggle debug mode.
-		m_showCosts = !m_showCosts;
+	if (EVMA::KeyPressed(SDL_SCANCODE_H)) // Toggle debug mode.
+		m_debug = !m_debug;
 	if (EVMA::KeyPressed(SDL_SCANCODE_SPACE)) // Toggle the heuristic used for pathfinding.
 	{
 		m_hEuclid = !m_hEuclid;
 		std::cout << "Setting " << (m_hEuclid ? "Euclidian" : "Manhattan") << " heuristic..." << std::endl;
 	}
-	if (EVMA::MousePressed(1) || EVMA::MousePressed(3)) // If user has clicked.
+	if ((EVMA::MousePressed(1) or EVMA::MousePressed(3)) and m_debug) // If user has clicked.
 	{
+		PAMA::ClearPath();
 		int xIdx = (EVMA::GetMousePos().x / 32);
 		int yIdx = (EVMA::GetMousePos().y / 32);
 		if (m_level[yIdx][xIdx]->IsObstacle() || m_level[yIdx][xIdx]->IsHazard())
 			return; // We clicked on an invalid tile.
 		if (EVMA::MousePressed(1)) // Move the player with left-click.
 		{
-			m_pPlayer->GetDstP()->x = (float)(xIdx * 32);
-			m_pPlayer->GetDstP()->y = (float)(yIdx * 32);
+			if (m_pBling->GetDstP()->x != (float)(xIdx * 32) or m_pBling->GetDstP()->y != (float)(yIdx * 32))
+			{
+				m_pPlayer->GetDstP()->x = (float)(xIdx * 32);
+				m_pPlayer->GetDstP()->y = (float)(yIdx * 32);
+			}
 		}
 		else if (EVMA::MousePressed(3)) // Else move the bling with right-click.
 		{
-			m_pBling->GetDstP()->x = (float)(xIdx * 32);
-			m_pBling->GetDstP()->y = (float)(yIdx * 32);
+			if (m_pPlayer->GetDstP()->x != (float)(xIdx * 32) or m_pPlayer->GetDstP()->y != (float)(yIdx * 32))
+			{
+				m_pBling->GetDstP()->x = (float)(xIdx * 32);
+				m_pBling->GetDstP()->y = (float)(yIdx * 32);
+			}
 		}
 		for (int row = 0; row < ROWS; row++) // "This is where the fun begins."
 		{ // Update each node with the selected heuristic and set the text for debug mode.
@@ -163,7 +181,13 @@ void GameState::Update()
 				m_level[row][col]->m_lCost->SetText(std::to_string((int)(m_level[row][col]->Node()->H())).c_str());
 			}
 		}
-		// Now we can calculate the path. Note: I am not returning a path again, only generating one to be rendered.
+	}
+
+	if (EVMA::KeyPressed(SDL_SCANCODE_R)) // Reset scene
+		STMA::ChangeState(new GameState);
+
+	if (EVMA::KeyPressed(SDL_SCANCODE_F) and m_debug) // Calculate the path
+	{
 		PAMA::GetShortestPath(m_level[(int)(m_pPlayer->GetDstP()->y / 32)][(int)(m_pPlayer->GetDstP()->x / 32)]->Node(),
 			m_level[(int)(m_pBling->GetDstP()->y / 32)][(int)(m_pBling->GetDstP()->x / 32)]->Node());
 	}
@@ -180,7 +204,7 @@ void GameState::Render()
 		{
 			m_level[row][col]->Render(); // Render each tile.
 			// Render the debug data...
-			if (m_showCosts && m_level[row][col]->Node() != nullptr)
+			if (m_debug && m_level[row][col]->Node() != nullptr)
 			{
 				m_level[row][col]->m_lCost->Render();
 				m_level[row][col]->m_lX->Render();
@@ -189,16 +213,38 @@ void GameState::Render()
 				for (unsigned i = 0; i < m_level[row][col]->Node()->GetConnections().size(); i++)
 				{
 					DEMA::QueueLine({ m_level[row][col]->Node()->GetConnections()[i]->GetFromNode()->x + 16, m_level[row][col]->Node()->GetConnections()[i]->GetFromNode()->y + 16 },
-						{ m_level[row][col]->Node()->GetConnections()[i]->GetToNode()->x + 16, m_level[row][col]->Node()->GetConnections()[i]->GetToNode()->y + 16 }, { 0,0,255,255 });
+						{ m_level[row][col]->Node()->GetConnections()[i]->GetToNode()->x + 16, m_level[row][col]->Node()->GetConnections()[i]->GetToNode()->y + 16 }, { 255,255,255,255 });
 				}
 			}
 
 		}
 	}
+
+	if (m_debug)
+	{
+		PAMA::DrawPath();
+		DEMA::FlushLines();
+	}
+
 	m_pPlayer->Render();
 	m_pBling->Render();
-	PAMA::DrawPath(); // I save the path in a static vector to be drawn here.
-	DEMA::FlushLines(); // And... render ALL the queued lines. Phew.
+
+	if (m_debug)
+	{
+		for (Label* label : debugLabels)
+		{
+			label->Render();
+		}
+	}
+	else
+	{
+		for (Label* label : labels)
+		{
+			label->Render();
+		}
+	}
+
+	totalPathCostLabel->Render();
 }
 
 void GameState::Exit()
@@ -211,9 +257,23 @@ void GameState::Exit()
 			m_level[row][col] = nullptr; // Wrangle your dangle.
 		}
 	}
+
 	for (auto const& i : m_tiles)
+	{
 		delete m_tiles[i.first];
+	}
 	m_tiles.clear();
+
+	for (Label* label : labels)
+	{
+		delete label;
+	}
+	labels.clear();
+
+	delete totalPathCostLabel;
+
+	PAMA::ClearPath();
+	DEMA::Quit();
 }
 
 void GameState::Resume()

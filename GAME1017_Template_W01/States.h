@@ -33,9 +33,13 @@ private:
 	SDL_Texture* m_pTileText, * m_pPlayerText;
 	std::map<char, Tile*> m_tiles;
 	std::array<std::array<Tile*, COLS>, ROWS> m_level; // Fixed-size STL array of Tile pointers.
+	std::vector<Label*> labels;
+	std::vector<Label*> debugLabels;
+	Label* totalPathCostLabel;
 	Player* m_pPlayer;
 	Sprite* m_pBling;
-	bool m_showCosts = false, m_hEuclid = true;
+	bool m_debug = false, m_hEuclid = true;
+
 public:
 	GameState();
 	void Update();

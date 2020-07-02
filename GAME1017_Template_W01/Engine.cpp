@@ -66,10 +66,10 @@ bool Engine::Init(const char* title, int xpos, int ypos, int width, int height, 
 	{
 		SOMA::SetSoundVolume(16, i);
 	}
+
 	FOMA::RegisterFont("Img/TITLEFONT.otf", "title", 24);
 	FOMA::RegisterFont("Img/LTYPE.TTF", "tile", 12);
 	
-
 	srand((unsigned)time(NULL));
 
 	// Final engine initialization calls.
