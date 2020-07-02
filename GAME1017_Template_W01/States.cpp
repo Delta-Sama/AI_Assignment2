@@ -5,6 +5,7 @@
 #include "PathManager.h"
 #include "EventManager.h"
 #include "DebugManager.h"
+#include "FontManager.h"
 #include <iostream>
 #include <fstream>
 
@@ -18,7 +19,10 @@ void State::Resume() {}
 void TitleState::Enter()
 {
 	m_playBtn = new PlayButton({ 0,0,512,200 }, { 312.0f,100.0f,400.0f,100.0f }, Engine::Instance().GetRenderer(), TEMA::GetTexture("play"));
-	m_pName = new Label("tile", 32, 32, "Maxim Dobrivskiy, 101290100");
+	
+	m_pName = new Label("title", 32, 32, "Maxim Dobrivskiy, 101290100");
+	
+	//FOMA::SetSize("Img/LTYPE.TTF", "tile", 10);
 	Engine::Instance().setEngineState(title);
 }
 
@@ -65,11 +69,11 @@ void GameState::Enter()
 	{ // Create map of Tile prototypes.
 		char key;
 		int x, y;
-		bool o, h;
+		bool obst, haz;
 		while (!inFile.eof())
 		{
-			inFile >> key >> x >> y >> o >> h;
-			m_tiles.emplace(key, new Tile({ x * 32, y * 32, 32, 32 }, { 0,0,32,32 }, Engine::Instance().GetRenderer(), m_pTileText, o, h));
+			inFile >> key >> x >> y >> obst >> haz;
+			m_tiles.emplace(key, new Tile({ x * 32, y * 32, 32, 32 }, { 0,0,32,32 }, Engine::Instance().GetRenderer(), m_pTileText, obst, haz));
 		}
 	}
 	inFile.close();

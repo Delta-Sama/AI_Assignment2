@@ -24,7 +24,7 @@ void Label::Render()
 void Label::SetText(const char* str)
 {
 	strcpy_s(m_String, 256, str);
-	SDL_Surface* fontSurf = TTF_RenderText_Solid(m_Font, m_String, m_TextColor);
+	SDL_Surface* fontSurf = TTF_RenderText_Blended(m_Font, m_String, m_TextColor);
 	SDL_DestroyTexture(m_pTexture);
 	m_pTexture = SDL_CreateTextureFromSurface(Engine::Instance().GetRenderer(), fontSurf);
 	m_rTextRect = { m_rTextRect.x, m_rTextRect.y, (float)fontSurf->w, (float)fontSurf->h };
