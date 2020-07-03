@@ -61,15 +61,17 @@ void GameState::Enter()
 	Engine::Instance().setEngineState(game);
 
 	totalPathCostLabel = new Label("title", 32, 32, "Total path cost: ...", { 0,0,0,255 });
-	labels.push_back(new Label("title", 32, 64, "Press R to reset the Scene", { 0, 0, 0, 255 }));
-	labels.push_back(new Label("title", 32, 96, "Press H for Debug Mode", { 0,0,0,255 }));
-	debugLabels.push_back(new Label("title", 32, 64, "Press R to reset the Scene", {0, 0, 0, 255}));
-	debugLabels.push_back(new Label("title", 32, 96, "Press F to find Shortest Path", { 0, 0, 0, 255 }));
-	debugLabels.push_back(new Label("title", 32, 128, "Press H for Game Mode", { 0, 0, 0, 255 }));
+	labels.push_back(new Label("title", 32, 64, "[R] - Reset", { 0, 0, 0, 255 }));
+	labels.push_back(new Label("title", 32, 96, "[M] - Follow the path", { 0, 0, 0, 255 }));
+	labels.push_back(new Label("title", 32, 128, "[H] - Debug Mode", { 0,0,0,255 }));
+	debugLabels.push_back(new Label("title", 32, 64, "[R] - Reset", {0, 0, 0, 255}));
+	debugLabels.push_back(new Label("title", 32, 96, "[M] - Follow the path", { 0, 0, 0, 255 }));
+	debugLabels.push_back(new Label("title", 32, 128, "[F] - Find Shortest Path", { 0, 0, 0, 255 }));
+	debugLabels.push_back(new Label("title", 32, 160, "[H] - Game Mode", { 0, 0, 0, 255 }));
 
 	m_pTileText = TEMA::GetTexture("tiles");
-	m_pPlayerText = TEMA::GetTexture("maga");
-	m_pPlayer = new Player({ 0,0,32,32 }, { (float)(16) * 32, (float)(12) * 32, 32, 32 }, Engine::Instance().GetRenderer(), m_pPlayerText, 0, 0, 0, 4);
+	m_pPlayerText = TEMA::GetTexture("player");
+	m_pPlayer = new Player({ 0,0,136,136 }, { (float)(16) * 32, (float)(12) * 32, 32, 32 }, Engine::Instance().GetRenderer(), m_pPlayerText, 0, 0, 0, 4);
 	m_pBling = new Sprite({ 224,64,32,32 }, { (float)(16) * 32, (float)(4) * 32, 32, 32 }, Engine::Instance().GetRenderer(), m_pTileText);
 	std::ifstream inFile("Dat/Tiledata.txt");
 	if (inFile.is_open())
@@ -129,6 +131,20 @@ void GameState::Enter()
 					MAMA::Distance(m_level[row][col]->Node()->x, m_level[row][col + 1]->Node()->x, m_level[row][col]->Node()->y, m_level[row][col + 1]->Node()->y)));
 		}
 	}
+
+	for (int row = 0; row < ROWS; row++) // "This is where the fun begins."
+	{ // Update each node with the selected heuristic and set the text for debug mode.
+		for (int col = 0; col < COLS; col++)
+		{
+			if (m_level[row][col]->Node() == nullptr)
+				continue;
+			if (m_hEuclid)
+				m_level[row][col]->Node()->SetH(PAMA::HEuclid(m_level[row][col]->Node(), m_level[(int)(m_pBling->GetDstP()->y / 32)][(int)(m_pBling->GetDstP()->x / 32)]->Node()));
+			else
+				m_level[row][col]->Node()->SetH(PAMA::HManhat(m_level[row][col]->Node(), m_level[(int)(m_pBling->GetDstP()->y / 32)][(int)(m_pBling->GetDstP()->x / 32)]->Node()));
+			m_level[row][col]->m_lCost->SetText(std::to_string((int)(m_level[row][col]->Node()->H())).c_str());
+		}
+	}
 }
 
 void GameState::Update()
@@ -145,7 +161,7 @@ void GameState::Update()
 		m_hEuclid = !m_hEuclid;
 		std::cout << "Setting " << (m_hEuclid ? "Euclidian" : "Manhattan") << " heuristic..." << std::endl;
 	}
-	if ((EVMA::MousePressed(1) or EVMA::MousePressed(3)) and m_debug) // If user has clicked.
+	if ((EVMA::MousePressed(1) or EVMA::MousePressed(3)) and m_debug and not m_marching) // If user has clicked.
 	{
 		PAMA::ClearPath();
 		int xIdx = (EVMA::GetMousePos().x / 32);
@@ -183,14 +199,50 @@ void GameState::Update()
 		}
 	}
 
-	if (EVMA::KeyPressed(SDL_SCANCODE_R)) // Reset scene
-		STMA::ChangeState(new GameState);
-
-	if (EVMA::KeyPressed(SDL_SCANCODE_F) and m_debug) // Calculate the path
+	if (EVMA::KeyPressed(SDL_SCANCODE_F) and m_debug and not m_marching) // Calculate the path
 	{
 		PAMA::GetShortestPath(m_level[(int)(m_pPlayer->GetDstP()->y / 32)][(int)(m_pPlayer->GetDstP()->x / 32)]->Node(),
 			m_level[(int)(m_pBling->GetDstP()->y / 32)][(int)(m_pBling->GetDstP()->x / 32)]->Node());
 	}
+
+	if (EVMA::KeyPressed(SDL_SCANCODE_M) and not m_marching) // Marching to the goal
+	{
+		if (PAMA::getPath() != nullptr and PAMA::getPath()->size() > 0)
+		{
+			m_marching = true;
+			m_marchPosition = 0;
+			m_marchFrame = 0;
+			m_deltaMoveX = m_deltaMoveY = 0;
+		}
+	}
+	if (m_marching)
+	{
+		m_pPlayer->GetDstP()->x += m_deltaMoveX;
+		m_pPlayer->GetDstP()->y += m_deltaMoveY;
+		if (++m_marchFrame >= m_maxMarchFrame)
+		{
+			if (m_marchPosition < PAMA::getPath()->size())
+			{
+				m_marchFrame = 0;
+				m_deltaMoveX = ((*PAMA::getPath())[m_marchPosition]->GetToNode()->x - m_pPlayer->GetDstP()->x) / (float)m_maxMarchFrame;
+				m_deltaMoveY = ((*PAMA::getPath())[m_marchPosition]->GetToNode()->y - m_pPlayer->GetDstP()->y) / (float)m_maxMarchFrame;
+				
+				float angle = MAMA::AngleBetweenPoints(m_deltaMoveY, m_deltaMoveX);
+				m_pPlayer->SetAngle(MAMA::Rad2Deg(angle) + 180);
+				m_marchPosition++;
+			}
+			else
+			{
+				m_marching = false;
+				m_pPlayer->GetDstP()->x = (*PAMA::getPath())[m_marchPosition - 1]->GetToNode()->x;
+				m_pPlayer->GetDstP()->y = (*PAMA::getPath())[m_marchPosition - 1]->GetToNode()->y;
+				PAMA::ClearPath();
+			}
+		}
+	}
+
+	if (EVMA::KeyPressed(SDL_SCANCODE_R) and not m_marching) // Reset scene
+		STMA::ChangeState(new GameState);
 }
 
 void GameState::Render()
@@ -226,8 +278,8 @@ void GameState::Render()
 		DEMA::FlushLines();
 	}
 
-	m_pPlayer->Render();
 	m_pBling->Render();
+	m_pPlayer->Render();
 
 	if (m_debug)
 	{
@@ -265,6 +317,12 @@ void GameState::Exit()
 	m_tiles.clear();
 
 	for (Label* label : labels)
+	{
+		delete label;
+	}
+	labels.clear();
+
+	for (Label* label : debugLabels)
 	{
 		delete label;
 	}

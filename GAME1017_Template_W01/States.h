@@ -39,6 +39,13 @@ private:
 	Player* m_pPlayer;
 	Sprite* m_pBling;
 	bool m_debug = false, m_hEuclid = true;
+	bool m_marching = false;
+
+	std::vector<PathConnection*> m_followPath;
+	const int m_maxMarchFrame = 5;
+	int m_marchPosition = 0;
+	int m_marchFrame = 0;
+	int m_deltaMoveX, m_deltaMoveY;
 
 public:
 	GameState();

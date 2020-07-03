@@ -47,7 +47,7 @@ bool Engine::Init(const char* title, int xpos, int ypos, int width, int height, 
 	//Files
 	TEMA::RegisterTexture("Img/PlayButton.png", "play");
 	TEMA::RegisterTexture("Img/Tiles.png", "tiles");
-	TEMA::RegisterTexture("Img/Maga.png", "maga");
+	TEMA::RegisterTexture("Img/PlayerShip.png", "player");
 
 	// Final engine initialization calls.
 	m_fps = (Uint32)round((1 / (double)FPS) * 1000); // Sets FPS in milliseconds and rounds.
